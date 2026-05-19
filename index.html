@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>化生诀</title>
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            margin: 0; padding: 0; 
+            background-color: #0F0B08; /* 极暗的暖黑底色 */
+            color: white; 
+            font-family: sans-serif; 
+            display: flex; 
+            justify-content: flex-end; /* 整体靠右，留出左侧给黄金分割和名言 */
+            align-items: center; 
+            height: 100vh; 
+            overflow: hidden; 
+            gap: 5vw; /* 使用相对视口的间距 */
+            padding-right: 5vw; /* 确保侧边栏离右边缘有一定距离 */
+        }
+        /* 独立的八字真言复制按钮，定位在表格正下方 */
+        .feng-hou-quote {
+            /* 取消绝对定位，让它在正常的文档流中排在最下面 */
+            position: relative;
+            margin-top: 20px; /* 距离上面的复制文本框留出间距 */
+            font-family: 'Ma Shan Zheng', 'KaiTi', 'STKaiti', cursive;
+            color: rgba(230, 168, 84, 0.8); /* 提高初始亮度 */
+            letter-spacing: 12px;
+            cursor: pointer; /* 改为可点击的手型 */
+            z-index: 5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            transition: all 0.3s;
+        }
+        /* 悬停时发光增强 */
+        .feng-hou-quote:hover {
+            color: #FFD700;
+            filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.8));
+            transform: scale(1.05); /* 移除 translateX(-50%)，因为不再是绝对定位 */
+        }
+        /* 点击时的效果 */
+        .feng-hou-quote:active {
+            transform: scale(0.95); /* 同上 */
+        }
+        .quote-char {
+            display: inline-block;
+            animation: breathQuote 6s infinite alternate; /* 动画周期拉长，更舒缓 */
+        }
+        @keyframes breathQuote {
+            0% { filter: brightness(0.8) drop-shadow(0 0 2px rgba(230, 168, 84, 0.1)); transform: translateY(0); }
+            100% { filter: brightness(1.2) drop-shadow(0 0 5px rgba(230, 168, 84, 0.4)); transform: translateY(-2px); } 
+        }
+        #star-container {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .star-layer {
+            position: absolute;
+            top: 0; left: 0;
+            width: 1px; height: 1px;
+            background: transparent;
+            transform-origin: 0 0;
+        }
+        .layer-1 { animation: spin 800s linear infinite; }
+        .layer-2 { animation: spin 600s linear infinite; }
+        .layer-3 { animation: spin 400s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        #luopan-container { 
+            width: 1200px; /* 加宽物理尺寸以容纳更大的罗盘 */
+            height: 1200px; 
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transform: scale(0.85); /* 因为尺寸变大了，默认缩小一点以免超出屏幕 */
+            transform-origin: center right; /* 缩放时靠右，以免挡住左侧文字 */
+        }
+        #sidebar {
+            width: 100%; /* 占满父容器 */
+            padding: 0; /* 取消所有内边距 */
+            background-color: transparent; /* 取消背景色 */
+            border: none; /* 弱化边框 */
+            border-radius: 0; /* 取消圆角 */
+            box-shadow: none; /* 取消阴影 */
+            display: flex; 
+            flex-direction: column;
+            /* 取消固定高度和滚动条 */
+            z-index: 10;
+        }
+        .feng-hou-title {
+            font-family: 'Ma Shan Zheng', 'KaiTi', 'STKaiti', cursive;
+            font-size: 80px; /* 字号加大 */
+            color: #C5832B; /* 加深为更重的暗铜金，作为主标题 */
+            text-align: center;
+            margin: 40px 0; /* 增加上下外边距，让它自然推开上下元素 */
+            font-weight: normal;
+            text-shadow: 0 0 20px rgba(197, 131, 43, 0.6), 2px 4px 5px rgba(0,0,0,0.9); /* 加深阴影发光 */
+            letter-spacing: 12px; /* 稍微增加字间距 */
+            line-height: 1;
+            /* 取消绝对定位，让它回到正常的文档流中 */
+            position: relative; 
+            z-index: 20; /* 确保在最上层 */
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .feng-hou-title:hover {
+            text-shadow: 0 0 30px rgba(212, 175, 55, 0.8), 2px 4px 5px rgba(0,0,0,0.9);
+            transform: scale(1.05); /* 移除 translate，避免因为定位改变导致飞走 */
+        }
+        #result { 
+            /* 取消 flex: 1，不强行撑开高度，由内容决定 */
+            flex: none; 
+            background: transparent; 
+            padding: 0; /* 取消原有的内边距 */
+            font-size: 14px; 
+            line-height: 1.6; 
+            border: none; 
+            overflow: visible; /* 允许内容完整显示 */
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 0; /* 取消为了绝对定位留的 200px 空白 */
+        }
+        .result-grid {
+            display: grid;
+            /* 强制左列更宽，右列自适应，防止长词折行 */
+            grid-template-columns: 55% 45%; 
+            column-gap: 10px;
+            row-gap: 15px;
+            margin-bottom: 20px; /* 和按钮留出间距 */
+        }
+        .result-item { 
+            display: flex;
+            align-items: center;
+            /* 取消下划虚线 */
+            border-bottom: none; 
+            padding-bottom: 0;
+            margin-bottom: 0;
+        }
+        .result-item.full-width {
+            grid-column: 1 / -1; /* 让该元素跨越所有列 */
+            justify-content: center; /* 内容整体居中 */
+            padding: 8px 10px;
+        }
+        .result-item.full-width .tag-title {
+            text-align: right;
+            width: auto; /* 取消固定宽度，让其自然贴合 */
+            margin-right: 15px;
+        }
+        .result-item.full-width .tag-select {
+            flex: 0 1 auto; /* 取消 flex: 1 的强行占满，改为适应内容 */
+            padding-right: 20px; /* 给下拉箭头留出空间 */
+        }
+        .tag-title { 
+            color: #888; 
+            width: 45px; 
+            text-align: right; 
+            margin-right: 10px;
+            flex-shrink: 0; 
+        }
+        .tag-select { 
+            color: #CBAA6A; /* 将属性的颜色调浅一点，降低饱和度 */
+            font-weight: bold; 
+            font-size: 14px;
+            flex: 1; 
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="%23CBAA6A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>') no-repeat right center;
+            background-size: 12px;
+            padding-right: 15px;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            font-family: 'Microsoft YaHei', sans-serif;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        .tag-select option {
+            background: rgba(20, 15, 10, 0.9);
+            color: #CBAA6A; /* 选项颜色也同步变浅 */
+        }
+        .tag-select:hover {
+            background-color: rgba(230, 168, 84, 0.1);
+            border-radius: 4px;
+        }
+        #copy-area {
+            margin-top: 10px; /* 减小间距 */
+            display: flex;
+            flex-direction: column;
+            gap: 5px; /* 减小间距 */
+        }
+        #generate-btn {
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        #generate-btn:hover {
+            text-shadow: 0 0 25px rgba(212, 175, 55, 0.8), 2px 4px 5px rgba(0,0,0,0.9);
+            transform: scale(1.05);
+        }
+        #copy-textarea {
+            width: 100%;
+            height: 110px; 
+            background: rgba(0, 0, 0, 0.4);
+            color: #ccc;
+            border: none;
+            border-radius: 5px;
+            padding: 10px;
+            font-size: 14px; 
+            line-height: 1.6; 
+            resize: none;
+            box-sizing: border-box;
+            font-family: 'Microsoft YaHei', sans-serif;
+            outline: none;
+            overflow-y: hidden; 
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); 
+            margin-top: 0; /* 取消为了绝对定位留的 100px 空白 */
+        }
+        #copy-textarea:focus {
+            box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.3);
+        }
+        #copy-btn {
+            display: none; /* 隐藏原有的复制按钮 */
+        }
+        svg { 
+            max-height: 100%; 
+            max-width: 100%; 
+            filter: drop-shadow(0 0 30px rgba(212, 175, 55, 0.15)); 
+        }
+        text { 
+            font-family: 'SimSun', '宋体', serif; 
+            text-anchor: middle; 
+            dominant-baseline: middle; 
+            user-select: none; 
+            pointer-events: none;
+        }
+        .highlight-arc {
+            display: none; /* 由 JS 动态控制 block */
+            fill: rgba(212, 175, 55, 0.4) !important; /* 覆盖原来的颜色，变成半透明金色 */
+            stroke: #D4AF37 !important; /* 增加金色边框 */
+            stroke-width: 2px !important;
+            /* 减弱扇环背景的光晕，防止喧宾夺主导致文字发虚 */
+            filter: drop-shadow(0 0 5px rgba(212, 175, 55, 0.5)); 
+            transition: fill 0.1s, stroke 0.1s;
+        }
+        .highlight-text { 
+            font-weight: bold; 
+            fill: #FFD700 !important; /* 文字变成高亮纯金 */
+            opacity: 1 !important; /* 相交时完全不透明 */
+            /* 加强选中时的古铜金发光效果 */
+            filter: drop-shadow(0 0 10px #F0E68C) drop-shadow(0 0 20px #D4AF37) drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.9)) !important;
+            transition: all 0.1s ease;
+        }
+        .highlight-text-white { 
+            font-weight: bold; 
+            fill: #FFFFFF !important; /* 文字变成高亮纯白 */
+            opacity: 1 !important; /* 相交时完全不透明 */
+            /* 加强选中时的白色发光效果 */
+            filter: drop-shadow(0 0 10px #FFFFFF) drop-shadow(0 0 20px #FFFFFF) drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.9)) !important;
+            transition: all 0.1s ease;
+        }
+        .ray-glow {
+            stroke: rgba(212, 175, 55, 0.3); /* 改为金色光晕 */
+            stroke-width: 60; /* 加宽辐射范围 (左右各多出20px，约1cm) */
+            pointer-events: none;
+            /* 增加模糊半径，让扩散更平滑、更柔和 */
+            filter: blur(15px);
+        }
+        .ray-line {
+            stroke: #D4AF37; /* 改为深金色射线 */
+            stroke-width: 2;
+            pointer-events: none;
+            filter: drop-shadow(0 0 5px #D4AF37);
+        }
+        .intersection-point {
+            fill: #FFF;
+            filter: drop-shadow(0 0 8px #D4AF37) drop-shadow(0 0 12px #FFF);
+        }
+        #center-btn {
+            transition: transform 0.2s ease, filter 0.2s ease;
+            transform-origin: center center;
+            /* 默认运行状态下不再有外发光，仅有边框 */
+            filter: none;
+        }
+        #center-btn .center-border {
+            stroke: #E6A854; /* 改为橙金边框 */
+            stroke-width: 2;
+            transition: stroke-width 0.2s ease;
+        }
+        #center-btn:hover {
+            transform: scale(1.05);
+        }
+        #center-btn.paused {
+            /* 暂停时爆发出较强的紫金光 */
+            filter: drop-shadow(0 0 10px #9932CC) drop-shadow(0 0 5px #D4AF37);
+        }
+        #center-btn.paused .center-border {
+            stroke: #FFC872; /* 暂停时边框加粗 */
+            stroke-width: 4;
+        }
+
+        .copied-text {
+            color: #9932CC !important;
+            font-size: 32px;
+            text-align: center;
+            letter-spacing: 20px;
+            /* 移除所有的发光 filter 和闪烁动画 */
+        }
+        /* Tooltip 悬浮提示框样式 */
+        #tooltip {
+            position: absolute;
+            background: rgba(20, 15, 10, 0.95);
+            border: none; /* 去除 Tooltip 边框 */
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8), 0 0 10px rgba(212, 175, 55, 0.15); /* 使用阴影代替边框 */
+            color: #D4C4A8;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: 'Microsoft YaHei', sans-serif;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 100;
+            white-space: pre-wrap;
+            max-width: 250px;
+            line-height: 1.5;
+        }
+        #tooltip .tooltip-title {
+            font-weight: bold;
+            font-size: 15px;
+            margin-bottom: 4px;
+            color: #E8DCC4;
+        }
+
+        /* 王也名言竖排文字样式 */
+        .wang-ye-quote {
+            position: absolute;
+            top: 50%;
+            left: 5%; /* 不再写死 60px，而是用百分比，确保在任何屏幕上都和罗盘保持合适距离 */
+            transform: translateY(-50%);
+            writing-mode: vertical-rl;
+            font-family: 'KaiTi', 'STKaiti', serif;
+            color: rgba(230, 138, 0, 0.2);
+            pointer-events: none; /* 防止遮挡鼠标事件 */
+            z-index: 5;
+            white-space: nowrap;
+        }
+
+        .wang-ye-quote span {
+            display: inline-block;
+            margin-bottom: 12px; /* 基础字间距 */
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        @keyframes breathChar {
+            0% { 
+                opacity: 0.15; 
+                text-shadow: 0 0 5px rgba(230, 138, 0, 0.1); 
+            }
+            100% { 
+                opacity: 1; 
+                color: rgba(230, 138, 0, 0.8);
+                text-shadow: 0 0 25px rgba(0, 229, 255, 0.7), 0 0 10px rgba(230, 138, 0, 0.9); 
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="star-container">
+        <div class="star-layer layer-1"></div>
+        <div class="star-layer layer-2"></div>
+        <div class="star-layer layer-3"></div>
+    </div>
+    
+    <div id="luopan-container">
+        <!-- SVG 将由 JS 动态生成并插入到这里 -->
+    </div>
+    
+    <!-- 侧边栏及名言包裹容器 -->
+    <div style="position: relative; display: flex; flex-direction: column; align-items: center; width: 450px;">
+        <!-- 将按钮放回正常的文档流，不再绝对定位 -->
+        <div id="sidebar">
+            <div id="result">
+                <!-- 动态内容 -->
+            </div>
+            
+            <h1 class="feng-hou-title" id="generate-btn">化生诀</h1>
+            
+            <div id="copy-area">
+                <textarea id="copy-textarea" readonly placeholder="阵法未定，命格未显..."></textarea>
+            </div>
+            
+            <!-- 独立的八字真言，放在 sidebar 内部的最下方，确保它跟着右侧面板走 -->
+            <div class="feng-hou-quote" id="quote-container"></div>
+        </div>
+    </div>
+    
+    <div id="tooltip"></div>
+
+    <script>
+        // ==========================================
+        // 动态生成名言的排列效果 (排直，不弯曲)
+        // ==========================================
+        const quoteText = "先天领周天，盖周天之变，化吾为王";
+        const quoteContainer = document.getElementById('quote-container');
+        if (quoteContainer) {
+            quoteContainer.innerHTML = '';
+            for (let i = 0; i < quoteText.length; i++) {
+                const char = quoteText[i];
+                if (char === '，') {
+                    const space = document.createElement('span');
+                    space.style.display = "inline-block";
+                    space.style.width = "40px"; // 标点符号留空
+                    quoteContainer.appendChild(space);
+                    continue;
+                }
+                const span = document.createElement('span');
+                span.className = 'quote-char';
+                span.innerText = char;
+                // 统一大小，不弯曲
+                span.style.fontSize = `24px`;
+                // 呼吸动画延迟和持续时间打乱
+                const delay = Math.random() * -6;
+                const duration = 4 + Math.random() * 3;
+                span.style.animationDelay = `${delay}s`;
+                span.style.animationDuration = `${duration}s`;
+                
+                quoteContainer.appendChild(span);
+            }
+        }
+
+        // 概率权重配置区
+        const rawRings = [
+            { name: "性别", desc: "决定人物的生理性别基础，影响后续购物倾向与人际关系处理方式。", values: ["男:51", "女:49"] },
+            { name: "年龄", desc: "决定人物所处的时代背景、消费观念代沟及生命阶段的核心矛盾。", values: ["10后:15", "00后:25", "90后:30", "80后:20", "70后及前:10"] },
+            { name: "地域", desc: "决定物价水平、生活节奏快慢以及面临的社会压力（如买房、通勤）。", values: ["超一线:5", "新一线:15", "二三线:30", "县城:25", "乡镇乡村:25"] },
+            { name: "婚育", desc: "极大地改变家庭现金流分配，是产生家庭计算纠纷的重要来源。", values: ["未婚:35", "已婚无孩:15", "已婚有孩:40", "离异:10"] },
+            { name: "居住", desc: "决定居住成本（房贷/租金）以及是否与他人产生生活边界冲突。", values: ["寄宿/父母同住:20", "合租:25", "整租:15", "自购房(有贷):30", "自购房(无贷):10"] },
+            { name: "职业", desc: "决定收入稳定性、空闲时间多少，以及遇到突发事件时的抗风险能力。", values: ["体制内:10", "企业白领:25", "蓝领技工:25", "灵活就业:20", "学生:15", "退休:5"] },
+            { name: "收入", desc: "直接决定这道计算题里的数字量级是几十块钱（温饱）还是几百万（高净值）。", values: ["温饱低保:10", "刚需月光:40", "中产小资:35", "高净值:10", "负债缺钱:5"] },
+            { name: "学历", desc: "一定程度上影响信息的获取能力、被骗的概率及解决复杂问题的思路。", values: ["基础教育:30", "中等学历:30", "高等学历:35", "高知精英:5"] },
+            { name: "算力", desc: "【关键约束】决定大模型是否要安排人物算错账，或只能使用加减法进行局限计算。", values: ["只会加减:20", "用计算器:50", "精通Excel:25", "懂金融复利:5"] },
+            { name: "脾气", desc: "决定人物在遇到财务纠纷或算错账时的情绪反应（隐忍 vs 爆发）。", values: ["暴躁易怒:15", "温和隐忍:30", "斤斤计较:20", "大大咧咧:25", "多疑敏感:10"] },
+            { name: "消费", desc: "决定购物时的决策树：是只看价格（极致抠门），还是被欲望支配（冲动剁手）。", values: ["极致抠门:15", "冲动剁手:20", "只买大牌:10", "实用主义:45", "超前消费:10"] },
+            { name: "风险", desc: "决定人物在面对投资、理赔、借钱时的心理防线和底线。", values: ["极度保守:40", "稳健理财:35", "高险投机:20", "赌徒心理:5"] },
+            { name: "兴趣", desc: "给计算题披上外壳，决定具体是在算打榜费、装备折旧还是改装成本。", values: ["饭圈打榜:5", "数码发烧:6", "钓鱼佬:5", "二次元:6", "萌宠奴:6", "美妆护肤:5", "摄影圈:4", "户外露营:5", "盲盒潮玩:5", "健身撸铁:5", "公路骑行:4", "三坑少女:4", "文玩手串:3", "烘焙烹饪:4", "游戏氪金:8", "咖啡茶艺:4", "机车改装:3", "玄学塔罗:3", "看展演出:4", "无特殊爱好:11"] },
+            { name: "软肋", desc: "为了什么可以不计成本？这往往是打破理性计算原则的核心破绽。", values: ["溺爱孩子:15", "死要面子:12", "恋爱脑/讨好伴侣:10", "健康养生焦虑:10", "容貌衰老焦虑:8", "宠物如命:8", "愚孝/盲从长辈:8", "讨好型人格:7", "重度外貌党:7", "盲目攀比虚荣:5", "迷信权威大师:5", "心软见不得惨:5"] },
+            { name: "癖好", desc: "给计算过程增加奇葩的隐藏规则（如必须凑整数、必须平摊AA、算退货率）。", values: ["凑整强迫症:10", "仓鼠狂爱囤货:10", "万物绝对AA:8", "积分签到狂魔:8", "捡漏二手淘客:8", "必须集齐一套:7", "绝不欠人情:7", "疯狂砍价爱好:7", "玄学迷信概率:7", "必算退货率:6", "宁贵不愿麻烦:6", "只认特定品牌:5", "绝不借钱欠债:5", "定期断舍离:3", "电子榨菜依赖:3"] },
+            { name: "情绪", desc: "计算时的实时状态，极端情绪（崩溃/狂喜/醉酒）极易导致数字判断失误。", values: ["疲惫想躺:20", "焦虑内耗:15", "愤怒暴躁:10", "无聊打发:10", "崩溃破防:8", "极度冷静:8", "狂喜极嗨:5", "攀比嫉妒:5", "懊悔自责:5", "迷茫无措:5", "患得患失:5", "醉酒冲动:4"] },
+            { name: "突发", desc: "打破平静生活的强外部变量，往往是触发本次紧急计算行为的直接导火索。", values: ["日常平淡:30", "急需用钱:10", "刚被裁员降薪:6", "家人突发疾病:6", "撞车追尾定损:5", "遭遇诈骗维权:5", "手机电器损坏:5", "基金股票暴跌:5", "信用卡快逾期:5", "房东突然赶人:4", "宠物突发恶疾:4", "意外发笔横财:4", "航班延误退改:4", "亲戚突然借钱:4", "忘买礼物补救:3"] },
+            { name: "环境", desc: "计算发生时的物理或时间空间，恶劣的环境（堵车/深夜/排队）会增加计算难度。", values: ["普通工作日:25", "发薪还款日前:12", "深夜失眠熬夜:10", "双十一大促前:8", "公司厕所摸鱼:6", "暴雨大雪天气:5", "嘈杂菜场超市:5", "医院走廊排队:5", "堵车的高架桥:5", "高铁飞机途中:5", "银行政务排号:4", "亲戚吵闹聚餐:4", "停电断网状态:2", "刚睡醒迷糊中:2", "烈日暴晒街头:2"] },
+            { name: "动机", desc: "【核心】计算的最底层驱动力：是为了省钱、防骗、做任务，还是规划未来？", values: ["防御止损:30", "进取逐利:30", "任务责任:25", "规划预期:15"] }
+        ];
+
+        const ringCount = rawRings.length;
+        // document.getElementById('title-header').innerText = `造数罗盘 (${ringCount}环)`;
+
+        // 解析权重，转换为角度
+        const parsedRings = rawRings.map(ring => {
+            let totalWeight = 0;
+            const items = ring.values.map(valStr => {
+                const parts = valStr.split(':');
+                const text = parts[0];
+                const weight = parts.length > 1 ? parseFloat(parts[1]) : 1;
+                totalWeight += weight;
+                return { text, weight };
+            });
+
+            let currentAngle = 0;
+            const arcs = items.map(item => {
+                const span = (item.weight / totalWeight) * 360;
+                const startAngle = currentAngle;
+                const endAngle = currentAngle + span;
+                currentAngle = endAngle;
+                return { ...item, startAngle, endAngle, span };
+            });
+
+            return { name: ring.name, desc: ring.desc, arcs };
+        });
+
+        // 尺寸计算
+        const r0 = 70; // 中心留白
+        const ringWidth = 38; // 基础扇环宽度
+        // 动态计算外径，不使用固定环宽公式
+        let currentRadius = r0;
+        const ringRadii = []; // 存储每一环的内外径
+
+        for (let i = 0; i < ringCount; i++) {
+            // 靠近中心 (i 较小) 粗一点，边缘 (i 较大) 细一点
+            // 使用一个缓动函数让过渡自然：最内圈约 46px，最外圈约 26px
+            const currentRingWidth = 46 - (20 * (i / (ringCount - 1))); 
+            
+            const r_inner = currentRadius;
+            const r_outer = r_inner + currentRingWidth;
+            const r_mid = r_inner + currentRingWidth / 2;
+            
+            ringRadii.push({ r_inner, r_outer, r_mid, width: currentRingWidth });
+            currentRadius = r_outer;
+        }
+        
+        const outerRadius = currentRadius;
+        const svgSize = (outerRadius + 20) * 2; 
+        const center = svgSize / 2;
+
+        const svgNS = "http://www.w3.org/2000/svg";
+        const svg = document.createElementNS(svgNS, "svg");
+        svg.setAttribute("viewBox", `0 0 ${svgSize} ${svgSize}`);
+        document.getElementById("luopan-container").appendChild(svg);
+
+        // 定义渐变
+        const defsGrad = document.createElementNS(svgNS, "defs");
+        
+        // 1. 神圣古铜橙金渐变 (用于所有边框) - 加橙色调，去掉刺眼纯黄，提升神圣感
+        const goldGrad = document.createElementNS(svgNS, "linearGradient");
+        goldGrad.setAttribute("id", "gold-grad");
+        goldGrad.setAttribute("x1", "0%"); goldGrad.setAttribute("y1", "0%");
+        goldGrad.setAttribute("x2", "100%"); goldGrad.setAttribute("y2", "100%");
+        goldGrad.innerHTML = `
+            <stop offset="0%" stop-color="#C5832B" /> <!-- 偏橙的暗铜金 -->
+            <stop offset="25%" stop-color="#E6A854" /> <!-- 神圣的橙金色 -->
+            <stop offset="50%" stop-color="#FFC872" /> <!-- 中心浅橙金高光 -->
+            <stop offset="75%" stop-color="#E6A854" /> <!-- 神圣的橙金色 -->
+            <stop offset="100%" stop-color="#C5832B" /> <!-- 偏橙的暗铜金 -->
+        `;
+        defsGrad.appendChild(goldGrad);
+
+        // 2. 射线渐变 (橙金 -> 紫金色)
+        const rayGrad = document.createElementNS(svgNS, "linearGradient");
+        rayGrad.setAttribute("id", "ray-grad");
+        rayGrad.setAttribute("x1", "0%"); rayGrad.setAttribute("y1", "0%");
+        rayGrad.setAttribute("x2", "100%"); rayGrad.setAttribute("y2", "0%");
+        rayGrad.innerHTML = `
+            <stop offset="0%" stop-color="#E6A854" stop-opacity="0.8"/>
+            <stop offset="40%" stop-color="#E6A854" stop-opacity="1"/>
+            <stop offset="70%" stop-color="#9932CC" stop-opacity="1"/>
+            <stop offset="100%" stop-color="#660099" stop-opacity="1"/>
+        `;
+        defsGrad.appendChild(rayGrad);
+
+        // 3. 外边缘紫金渐变弧 (紫色向橙金渐变，去除中心白光)
+        const arcGrad = document.createElementNS(svgNS, "linearGradient");
+        arcGrad.setAttribute("id", "purple-arc-grad");
+        arcGrad.setAttribute("x1", "0%"); arcGrad.setAttribute("y1", "0%");
+        arcGrad.setAttribute("x2", "0%"); arcGrad.setAttribute("y2", "100%");
+        arcGrad.innerHTML = `
+            <stop offset="0%" stop-color="#C5832B" stop-opacity="0" />
+            <stop offset="15%" stop-color="#E6A854" stop-opacity="0.8" />
+            <stop offset="35%" stop-color="#660099" />
+            <stop offset="50%" stop-color="#9932CC" /> <!-- 中心的深紫色，去除了原来的 #FFFFFF -->
+            <stop offset="65%" stop-color="#660099" />
+            <stop offset="85%" stop-color="#E6A854" stop-opacity="0.8" />
+            <stop offset="100%" stop-color="#C5832B" stop-opacity="0" />
+        `;
+        defsGrad.appendChild(arcGrad);
+
+        // 4. 交点光晕径向渐变 - 减小白色，极慢闪烁的紫点
+        const radialGrad = document.createElementNS(svgNS, "radialGradient");
+        radialGrad.setAttribute("id", "purple-glow-radial");
+        radialGrad.setAttribute("cx", "50%"); radialGrad.setAttribute("cy", "50%");
+        radialGrad.setAttribute("r", "50%");
+        radialGrad.innerHTML = `
+            <stop offset="0%" stop-color="#E5CCFF" stop-opacity="0.9" /> <!-- 减弱了中心的纯白 -->
+            <stop offset="25%" stop-color="#D896FF" stop-opacity="0.8" />
+            <stop offset="50%" stop-color="#9932CC" stop-opacity="0.4" />
+            <stop offset="100%" stop-color="#660099" stop-opacity="0" />
+        `;
+        defsGrad.appendChild(radialGrad);
+        // 叠加一层极淡的噪点纹理提升古铜磨砂质感
+        const filter = document.createElementNS(svgNS, "filter");
+        filter.setAttribute("id", "noise");
+        const feTurbulence = document.createElementNS(svgNS, "feTurbulence");
+        feTurbulence.setAttribute("type", "fractalNoise");
+        feTurbulence.setAttribute("baseFrequency", "0.8");
+        feTurbulence.setAttribute("numOctaves", "3");
+        feTurbulence.setAttribute("stitchTiles", "stitch");
+        filter.appendChild(feTurbulence);
+        const feColorMatrix = document.createElementNS(svgNS, "feColorMatrix");
+        feColorMatrix.setAttribute("type", "matrix");
+        // 将噪点转化为黑白，并降低透明度到 8% 左右
+        feColorMatrix.setAttribute("values", "1 0 0 0 0, 1 0 0 0 0, 1 0 0 0 0, 0 0 0 0.08 0");
+        filter.appendChild(feColorMatrix);
+        // 定义中心紫金外发光 filter (暂停时使用)
+        const centerPurpleGlowFilter = document.createElementNS(svgNS, "filter");
+        centerPurpleGlowFilter.setAttribute("id", "center-purple-glow");
+        centerPurpleGlowFilter.innerHTML = `
+            <feGaussianBlur in="SourceAlpha" stdDeviation="4" result="blur"/>
+            <feFlood flood-color="#9932CC" flood-opacity="0.9" result="glowColor"/>
+            <feComposite in="glowColor" in2="blur" operator="in" result="glow"/>
+            <feMerge>
+                <feMergeNode in="glow"/>
+                <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+        `;
+        defsGrad.appendChild(centerPurpleGlowFilter);
+        const centerInnerGlowFilter = document.createElementNS(svgNS, "filter");
+        centerInnerGlowFilter.setAttribute("id", "center-inner-glow");
+        
+        // 内发光的核心逻辑：用源图形的 Alpha 通道进行反转，加上模糊，然后通过 composite 和原图合成
+        centerInnerGlowFilter.innerHTML = `
+            <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="blur"/>
+            <feFlood flood-color="#FFD700" flood-opacity="0.8" result="glowColor"/>
+            <feComposite in="glowColor" in2="blur" operator="in" result="glow"/>
+            <feComposite in="glow" in2="SourceAlpha" operator="in" result="glowSoft"/>
+            <!-- 用一个动画控制内发光强弱 (通过调整 offset 或者直接简单叠加两层) -->
+            <feMerge>
+                <feMergeNode in="SourceGraphic"/>
+                <feMergeNode in="glowSoft"/>
+            </feMerge>
+        `;
+        defsGrad.appendChild(centerInnerGlowFilter);
+
+        svg.appendChild(defsGrad);
+
+        // 极坐标转笛卡尔坐标
+        function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
+            const angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
+            return {
+                x: centerX + (radius * Math.cos(angleInRadians)),
+                y: centerY + (radius * Math.sin(angleInRadians))
+            };
+        }
+
+        // 生成 SVG 扇形路径
+        function arcPath(x, y, radiusIn, radiusOut, startAngle, endAngle) {
+            if (endAngle - startAngle >= 359.9) endAngle = startAngle + 359.9;
+            const startIn = polarToCartesian(x, y, radiusIn, endAngle);
+            const endIn = polarToCartesian(x, y, radiusIn, startAngle);
+            const startOut = polarToCartesian(x, y, radiusOut, endAngle);
+            const endOut = polarToCartesian(x, y, radiusOut, startAngle);
+            const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+            return [
+                "M", startOut.x, startOut.y,
+                "A", radiusOut, radiusOut, 0, largeArcFlag, 0, endOut.x, endOut.y,
+                "L", endIn.x, endIn.y,
+                "A", radiusIn, radiusIn, 0, largeArcFlag, 1, startIn.x, startIn.y,
+                "Z"
+            ].join(" ");
+        }
+
+        // 底盘大圆
+        const bgCircle = document.createElementNS(svgNS, "circle");
+        bgCircle.setAttribute("cx", center);
+        bgCircle.setAttribute("cy", center);
+        bgCircle.setAttribute("r", outerRadius);
+        bgCircle.setAttribute("fill", "none"); // 去掉填充
+        bgCircle.setAttribute("stroke", "url(#gold-grad)"); // 金色渐变边框
+        // 随机粗细 (大外圈稍粗)
+        bgCircle.setAttribute("stroke-width", (2 + Math.random() * 2).toFixed(1));
+        // 不加过大的光晕，只保留极其微弱的发光以确保边缘清晰
+        bgCircle.style.filter = "drop-shadow(0 0 2px rgba(212, 175, 55, 0.4))";
+        svg.appendChild(bgCircle);
+
+        // 核心数据结构：保存旋转状态和DOM元素
+        const ringData = [];
+
+        // 创建一个包裹所有圆环的大容器，将其原点定在 SVG 的中心
+        const allRingsContainer = document.createElementNS(svgNS, "g");
+        allRingsContainer.setAttribute("transform", `translate(${center}, ${center})`);
+        svg.appendChild(allRingsContainer);
+
+        for(let i=0; i<ringCount; i++) {
+            // 使用之前计算好的动态内外径
+            const { r_inner, r_outer, r_mid, width: currentRingWidth } = ringRadii[i];
+            
+            // 每一环创建一个独立的组
+            const group = document.createElementNS(svgNS, "g");
+            allRingsContainer.appendChild(group);
+
+            const ringArcs = parsedRings[i].arcs;
+            const uiArcs = [];
+
+            ringArcs.forEach((arc, idx) => {
+                // 恢复分割竖线，改为极细
+                const p = polarToCartesian(0, 0, r_inner, arc.startAngle);
+                const p2 = polarToCartesian(0, 0, r_outer, arc.startAngle);
+                const line = document.createElementNS(svgNS, "line");
+                line.setAttribute("x1", p.x);
+                line.setAttribute("y1", p.y);
+                line.setAttribute("x2", p2.x);
+                line.setAttribute("y2", p2.y);
+                line.setAttribute("stroke", "url(#gold-grad)");
+                line.setAttribute("stroke-width", "0.5"); // 极细
+                line.setAttribute("opacity", 0.4 + Math.random() * 0.4);
+                group.appendChild(line);
+                
+                // 高亮扇形
+                const highlightPath = document.createElementNS(svgNS, "path");
+                highlightPath.setAttribute("d", arcPath(0, 0, r_inner, r_outer, arc.startAngle, arc.endAngle));
+                highlightPath.setAttribute("class", "highlight-arc");
+                highlightPath.style.display = "none";
+                group.appendChild(highlightPath);
+
+                // 文字
+                const midAngle = arc.startAngle + arc.span / 2;
+                const text = document.createElementNS(svgNS, "text");
+                // 所有文字全部改为纯白色
+                let color = "#FFFFFF"; 
+                text.setAttribute("fill", color);
+                text.textContent = arc.text;
+                
+                // 默认状态下(未相交)大大降低透明度，使其显得幽暗
+                text.setAttribute("opacity", "0.9"); // 所有文字透明度改为 90%
+                text.setAttribute("class", "normal-text"); // 增加一个类名方便在 CSS 中或者 JS 中重置
+
+                // 微弱的白色发光，越靠近中心越亮 (opacity 根据 i 计算)
+                const textGlowOpacity = 0.8 - (0.6 * (i / (ringCount - 1))); // 内圈 0.8，外圈 0.2
+                text.style.filter = `drop-shadow(0 0 4px rgba(255, 255, 255, ${textGlowOpacity}))`; // 全部改为白色发光
+                
+                // 统一字号为 12px，解决字体大小不一致的问题
+                let fontSize = 12;
+                if(arc.span < 4) fontSize = 0; // 如果扇形面积太小（如极小权重），隐藏文字防止重叠
+                
+                text.setAttribute("font-size", fontSize + "px");
+                text.setAttribute("font-weight", "bold");
+                
+                // 文字同样相对于 (0,0) 进行定位和旋转
+                text.setAttribute("transform", `rotate(${midAngle}) translate(0, ${-r_mid})`);
+                
+                group.appendChild(text);
+                const textElements = [{ el: text, baseColor: color }];
+
+                uiArcs.push({
+                    data: arc,
+                    highlightPath: highlightPath,
+                    textElements: textElements
+                });
+            });
+
+            // 外圈闭合线
+            const circle = document.createElementNS(svgNS, "circle");
+            circle.setAttribute("cx", 0);
+            circle.setAttribute("cy", 0);
+            circle.setAttribute("r", r_outer);
+            circle.setAttribute("fill", "none");
+            circle.setAttribute("stroke", "url(#gold-grad)");
+            // 随机粗细 1.5 到 3.5
+            circle.setAttribute("stroke-width", (1.5 + Math.random() * 2).toFixed(1));
+            // 透明度也稍微随机
+            circle.setAttribute("opacity", 0.6 + Math.random() * 0.4);
+            // 增加一个透明的、较宽的圆环用于触发 Tooltip 鼠标事件 (SVG 内)
+            const hoverArea = document.createElementNS(svgNS, "circle");
+            hoverArea.setAttribute("cx", 0);
+            hoverArea.setAttribute("cy", 0);
+            hoverArea.setAttribute("r", r_mid);
+            hoverArea.setAttribute("fill", "none");
+            hoverArea.setAttribute("stroke", "transparent");
+            hoverArea.setAttribute("stroke-width", currentRingWidth); // 使用动态计算的环宽
+            // 必须使用 stroke，如果用 all 会导致大圆的透明内部区域遮挡小圆！
+            hoverArea.style.pointerEvents = "stroke"; 
+            hoverArea.style.cursor = "help";
+            
+            // SVG 内圆环的悬浮提示逻辑
+            const tooltip = document.getElementById('tooltip');
+            const ringIndex = i; // 闭包陷阱修复：缓存当前的 i 值
+            hoverArea.addEventListener('mouseenter', (e) => {
+                tooltip.innerHTML = `<div class="tooltip-title">[${parsedRings[ringIndex].name}]</div>${parsedRings[ringIndex].desc}`;
+                tooltip.style.opacity = 1;
+            });
+            hoverArea.addEventListener('mousemove', (e) => {
+                tooltip.style.left = (e.pageX + 15) + 'px';
+                tooltip.style.top = (e.pageY + 15) + 'px';
+            });
+            hoverArea.addEventListener('mouseleave', () => {
+                tooltip.style.opacity = 0;
+            });
+
+            group.appendChild(circle);
+            group.appendChild(hoverArea);
+
+            // ==========================================
+            // 旋转速度计算：外圈极快，向内等比递减 (最外层动机环保持原样)
+            // ==========================================
+            const direction = i % 2 === 0 ? -1 : 1;
+            
+            const maxSpeed = 1.2; // 最内环(现在变成倒数第二环)的角速度基准值
+            const ratio = 0.88;   // 等比衰减系数
+            
+            let speed = 0;
+            if (i === 18) {
+                // 第 19 环 (索引 18，动机环) 保持原有逻辑不动 (最慢)
+                speed = maxSpeed * Math.pow(ratio, i) * direction;
+            } else {
+                // 第 1 环到第 18 环 (索引 0 到 17) 速度首尾对调
+                // 也就是原本索引为 i 的环，现在使用索引 (17 - i) 的速度
+                const reversedIndex = 17 - i;
+                speed = maxSpeed * Math.pow(ratio, reversedIndex) * direction;
+            }
+
+            // 初始化随机角度
+            const initialRotation = Math.random() * 360;
+
+            ringData.push({
+                groupEl: group,
+                arcs: uiArcs,
+                rotation: initialRotation,
+                speed: speed,
+                name: parsedRings[i].name
+            });
+        }
+
+        // 射线及交点容器 (跟随鼠标旋转)
+        const mouseTrackerGroup = document.createElementNS(svgNS, "g");
+        mouseTrackerGroup.setAttribute("transform", `translate(${center}, ${center})`);
+        svg.appendChild(mouseTrackerGroup);
+
+        // 射线主线 - 确保是纯金色，粗细与边框差不多，稍微粗一点
+        const dynamicRay = document.createElementNS(svgNS, "line");
+        dynamicRay.setAttribute("x1", r0);
+        dynamicRay.setAttribute("y1", 0);
+        dynamicRay.setAttribute("x2", outerRadius);
+        dynamicRay.setAttribute("y2", 0);
+        // 使用橙金色而不是渐变，确保射线是纯正的金色
+        dynamicRay.setAttribute("stroke", "#E6A854"); 
+        dynamicRay.setAttribute("stroke-width", "3"); // 从 8 减小到 3 (边框大约 1.5-3.5)
+        // 阴影也使用金色，增强金色射线的发光感
+        dynamicRay.style.filter = "drop-shadow(0 0 5px rgba(230, 168, 84, 1))"; 
+        mouseTrackerGroup.appendChild(dynamicRay);
+
+        // 射线发光层 - 也改为纯金色发光
+        const dynamicRayGlow = document.createElementNS(svgNS, "line");
+        dynamicRayGlow.setAttribute("x1", r0);
+        dynamicRayGlow.setAttribute("y1", 0);
+        dynamicRayGlow.setAttribute("x2", outerRadius);
+        dynamicRayGlow.setAttribute("y2", 0);
+        dynamicRayGlow.setAttribute("stroke", "#E6A854"); // 古铜金发光
+        dynamicRayGlow.setAttribute("stroke-width", "8"); // 从 25 减小到 8，贴合射线
+        dynamicRayGlow.style.filter = "blur(4px)";
+        dynamicRayGlow.style.opacity = "0.8"; 
+        mouseTrackerGroup.insertBefore(dynamicRayGlow, dynamicRay); // 确保发光层在主线下面
+
+        // 取消内侧圆环的金色交点
+        // (旧的 for 循环已被移除)
+
+        // 移除最外侧交点区域的径向光晕和核心点，因为用户说“这块给我改回去，还能再丑点吗”，说明他不喜欢最外圈的这些发光效果
+        // 回复用户：已经为您恢复了紫色焦点！
+        // 最外侧边缘的紫金色渐变弧 (辐射影响左右边框，覆盖约 20 厘米，对应大约 60 度)
+        const outerArcPath = document.createElementNS(svgNS, "path");
+        const angleSpan = 30; // 总跨度 60 度 (左右各 30 度)，视觉上约 20 厘米
+        const startA = -angleSpan * Math.PI / 180;
+        const endA = angleSpan * Math.PI / 180;
+        const pStartX = outerRadius * Math.cos(startA);
+        const pStartY = outerRadius * Math.sin(startA);
+        const pEndX = outerRadius * Math.cos(endA);
+        const pEndY = outerRadius * Math.sin(endA);
+        outerArcPath.setAttribute("d", `M ${pStartX} ${pStartY} A ${outerRadius} ${outerRadius} 0 0 1 ${pEndX} ${pEndY}`);
+        outerArcPath.setAttribute("fill", "none");
+        outerArcPath.setAttribute("stroke", "url(#purple-arc-grad)");
+        outerArcPath.setAttribute("stroke-width", "4"); // 减小粗细，避免向内扩散
+        // 调整发光效果：只保留沿着线条自身的发光，极大幅度减小外扩范围，绝对不影响倒数第二环
+        outerArcPath.style.filter = "drop-shadow(0 0 2px #FFFFFF) drop-shadow(0 0 5px #9932CC)";
+        // 添加透明度闪烁动画，放慢速度 (从 1.5s 减慢到 4s)
+        const animateArcOpacity = document.createElementNS(svgNS, "animate");
+        animateArcOpacity.setAttribute("attributeName", "opacity");
+        animateArcOpacity.setAttribute("values", "0.4; 1; 0.4");
+        animateArcOpacity.setAttribute("dur", "4s");
+        animateArcOpacity.setAttribute("repeatCount", "indefinite");
+        outerArcPath.appendChild(animateArcOpacity);
+        mouseTrackerGroup.appendChild(outerArcPath);
+
+        // 完全移除径向光晕 (outerPointBlob)
+        // 完全移除中心白紫色的外发光核心点 (outerPoint)
+
+        // 创建一个专门存放“相交光点”的容器 (为了兼容旧代码不报错，如果旧代码还有引用的话)
+        const pointsContainer = document.createElementNS(svgNS, "g");
+        svg.appendChild(pointsContainer);
+
+        // 中心太极图/文字区 (在最顶层)
+        const centerBtnGroup = document.createElementNS(svgNS, "g");
+        centerBtnGroup.setAttribute("id", "center-btn");
+        centerBtnGroup.style.cursor = "pointer";
+        svg.appendChild(centerBtnGroup);
+
+        // 取消原有的图片下方外发光层
+        // (被注释或删除)
+        // const centerGlow = document.createElementNS(svgNS, "circle");
+        // ...
+
+        const centerCircle = document.createElementNS(svgNS, "circle");
+        centerCircle.setAttribute("cx", center);
+        centerCircle.setAttribute("cy", center);
+        centerCircle.setAttribute("r", r0);
+        centerCircle.setAttribute("fill", "#F2E8C9");
+        centerCircle.setAttribute("stroke", "#E6A854"); // 边框也改为橙金
+        centerCircle.setAttribute("stroke-width", "4");
+        centerBtnGroup.appendChild(centerCircle);
+
+        // 剪裁路径，让图片变成圆形
+        const defs = document.createElementNS(svgNS, "defs");
+        const clipPath = document.createElementNS(svgNS, "clipPath");
+        clipPath.setAttribute("id", "center-clip");
+        const clipCircle = document.createElementNS(svgNS, "circle");
+        clipCircle.setAttribute("cx", center);
+        clipCircle.setAttribute("cy", center);
+        clipCircle.setAttribute("r", r0);
+        clipPath.appendChild(clipCircle);
+        defs.appendChild(clipPath);
+        svg.appendChild(defs);
+
+        const centerImage = document.createElementNS(svgNS, "image");
+        centerImage.setAttribute("x", center - r0);
+        centerImage.setAttribute("y", center - r0);
+        centerImage.setAttribute("width", r0 * 2);
+        centerImage.setAttribute("height", r0 * 2);
+        centerImage.setAttribute("href", "王也元神.png"); // 指定图片路径
+        centerImage.setAttribute("clip-path", "url(#center-clip)");
+        centerImage.setAttribute("preserveAspectRatio", "xMidYMid slice");
+        // 重新加上文字 (作为备用)
+        const centerText = document.createElementNS(svgNS, "text");
+        centerText.setAttribute("x", center);
+        centerText.setAttribute("y", center + 5); 
+        centerText.setAttribute("fill", "#111");
+        centerText.setAttribute("font-size", "48px");
+        centerText.setAttribute("font-weight", "bold");
+        centerText.setAttribute("font-family", "KaiTi, serif");
+        centerText.textContent = "人";
+        centerText.style.pointerEvents = "none"; // 防止文字遮挡点击事件
+        
+        // 图片加载失败逻辑
+        centerImage.onerror = function() {
+            centerImage.style.display = 'none'; // 隐藏破损的图片图标
+            centerBtnGroup.appendChild(centerText); // 只有图片加载失败时才显示文字
+        };
+        
+        centerBtnGroup.appendChild(centerImage);
+
+        // 在图片上方再盖一个空心圆，作为图片的外边框
+        const centerImageBorder = document.createElementNS(svgNS, "circle");
+        centerImageBorder.setAttribute("cx", center);
+        centerImageBorder.setAttribute("cy", center);
+        centerImageBorder.setAttribute("r", r0);
+        centerImageBorder.setAttribute("fill", "none");
+        // 改为纯金边框
+        centerImageBorder.setAttribute("stroke", "#E6A854"); 
+        centerImageBorder.setAttribute("stroke-width", "2"); 
+        centerImageBorder.setAttribute("class", "center-border"); // 用于CSS变色
+        centerBtnGroup.appendChild(centerImageBorder);
+
+        // 绘制整个罗盘区域的噪点遮罩层 (放在最顶层)
+        const noiseRect = document.createElementNS(svgNS, "rect");
+        noiseRect.setAttribute("width", "100%");
+        noiseRect.setAttribute("height", "100%");
+        noiseRect.setAttribute("fill", "url(#noise)");
+        noiseRect.style.pointerEvents = "none"; // 确保不影响鼠标交互
+        svg.appendChild(noiseRect);
+
+        // 交互逻辑：鼠标追踪
+        let mouseAngle = 0; 
+        const pt = svg.createSVGPoint();
+
+        // 暂停/启动控制逻辑
+        let isRunning = true;
+        // 点击中心图片暂停/启动
+        centerBtnGroup.addEventListener('click', (e) => {
+            isRunning = !isRunning;
+            if (!isRunning) {
+                centerBtnGroup.classList.add("paused");
+                centerImage.style.filter = "url(#center-purple-glow)"; // 暂停时加上外发光滤镜
+            } else {
+                centerBtnGroup.classList.remove("paused");
+                centerImage.style.filter = "none"; // 运行时取消滤镜
+            }
+            e.stopPropagation(); // 阻止事件冒泡
+        });
+
+        svg.addEventListener("mousemove", (evt) => {
+            pt.x = evt.clientX;
+            pt.y = evt.clientY;
+            const cursorPt = pt.matrixTransform(svg.getScreenCTM().inverse());
+            
+            const dx = cursorPt.x - center;
+            const dy = cursorPt.y - center;
+            
+            let rawAngle = Math.atan2(dy, dx) * 180 / Math.PI;
+            mouseAngle = (rawAngle + 90) % 360;
+            if(mouseAngle < 0) mouseAngle += 360;
+
+            // 旋转跟随鼠标的组 (Math.atan2 的 0 度是在 X 轴正方向，正好对应我们的绘制方向)
+            mouseTrackerGroup.setAttribute("transform", `translate(${center}, ${center}) rotate(${rawAngle})`);
+        });
+
+        // 鼠标滚轮拨动特定圆环逻辑
+        svg.addEventListener("wheel", (evt) => {
+            pt.x = evt.clientX;
+            pt.y = evt.clientY;
+            const cursorPt = pt.matrixTransform(svg.getScreenCTM().inverse());
+            
+            const dx = cursorPt.x - center;
+            const dy = cursorPt.y - center;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            // 检查鼠标是否在某个圆环的区域内
+            if (distance >= r0 && distance < outerRadius) {
+                evt.preventDefault(); // 阻止页面整体滚动
+                
+                // 根据距离动态查找命中的是哪一环
+                let ringIndex = -1;
+                for (let i = 0; i < ringRadii.length; i++) {
+                    if (distance >= ringRadii[i].r_inner && distance < ringRadii[i].r_outer) {
+                        ringIndex = i;
+                        break;
+                    }
+                }
+                
+                if (ringIndex !== -1) {
+                    // 每次滚动拨动 6 度（可根据手感微调）
+                    const rotationAmount = evt.deltaY > 0 ? 6 : -6;
+                    ringData[ringIndex].rotation = (ringData[ringIndex].rotation + rotationAmount) % 360;
+                }
+            }
+        }, { passive: false });
+
+        // 初始化右侧的下拉框
+        const resultContainer = document.getElementById("result");
+        resultContainer.innerHTML = "<div class='result-grid'></div>";
+        const resultGrid = resultContainer.querySelector('.result-grid');
+        const selects = [];
+
+        ringData.forEach((ring, i) => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'result-item';
+            
+            // 如果是动机环，让它占满两列
+            if (ring.name === "动机") {
+                itemDiv.classList.add('full-width');
+            }
+            
+            const titleSpan = document.createElement('span');
+            titleSpan.className = 'tag-title';
+            titleSpan.innerText = `[${ring.name}]`;
+            
+            const select = document.createElement('select');
+            select.className = 'tag-select';
+            
+            ring.arcs.forEach(arcUI => {
+                const option = document.createElement('option');
+                option.value = arcUI.data.text;
+                option.innerText = arcUI.data.text;
+                select.appendChild(option);
+            });
+            
+            // 监听下拉框改变事件，反向同步旋转圆环
+            select.addEventListener('change', (e) => {
+                const selectedValue = e.target.value;
+                const targetArc = ring.arcs.find(a => a.data.text === selectedValue);
+                if (targetArc) {
+                    // 暂停全局自转，方便用户观察
+                    if (isRunning) {
+                        isRunning = false;
+                        document.getElementById("center-btn").classList.add("paused");
+                    }
+                    // 计算需要对齐的目标角度
+                    let targetRelativeAngle = (targetArc.data.startAngle + targetArc.data.endAngle) / 2;
+                    ring.rotation = (mouseAngle - targetRelativeAngle + 360) % 360;
+                }
+            });
+            
+            // --- Tooltip 悬浮交互 (右侧面板) ---
+            const tooltip = document.getElementById('tooltip');
+            // 【闭包修复】：将 let i 替换为常量 ringIndex 绑定到事件中
+            const rightPanelRingIndex = i;
+            titleSpan.addEventListener('mouseenter', (e) => {
+                tooltip.innerHTML = `<div class="tooltip-title">[${parsedRings[rightPanelRingIndex].name}]</div>${parsedRings[rightPanelRingIndex].desc}`;
+                tooltip.style.opacity = 1;
+            });
+            titleSpan.addEventListener('mousemove', (e) => {
+                // 让 tooltip 跟随鼠标，并稍微偏移一点防止遮挡鼠标
+                tooltip.style.left = (e.pageX + 15) + 'px';
+                tooltip.style.top = (e.pageY + 15) + 'px';
+            });
+            titleSpan.addEventListener('mouseleave', () => {
+                tooltip.style.opacity = 0;
+            });
+            // -----------------------------------
+            
+            itemDiv.appendChild(titleSpan);
+            itemDiv.appendChild(select);
+            resultGrid.appendChild(itemDiv);
+            
+            selects.push(select);
+        });
+
+        // 快速随机生成人格按钮逻辑 (绑定到 造人诀 标题按钮)
+        document.getElementById("generate-btn").addEventListener("click", () => {
+            // 停止自转
+            isRunning = false;
+            document.getElementById("center-btn").classList.add("paused");
+            
+            ringData.forEach((ring, i) => {
+                // 根据权重随机抽取
+                const arcs = parsedRings[i].arcs;
+                const totalWeight = arcs.reduce((sum, arc) => sum + arc.weight, 0);
+                let randomWeight = Math.random() * totalWeight;
+                let selectedArc = arcs[0];
+                
+                for (let arc of arcs) {
+                    if (randomWeight < arc.weight) {
+                        selectedArc = arc;
+                        break;
+                    }
+                    randomWeight -= arc.weight;
+                }
+                
+                // 计算对齐红线所需的旋转角度
+                let targetRelativeAngle = (selectedArc.startAngle + selectedArc.endAngle) / 2;
+                ring.rotation = (mouseAngle - targetRelativeAngle + 360) % 360;
+            });
+        });
+
+        let lastResultJSON = "";
+
+        // 动画循环
+        function animate() {
+            const valMap = {};
+            let copyTextArray = [];
+
+            // 清空上一帧的光点
+            pointsContainer.innerHTML = '';
+
+            ringData.forEach((ring, i) => {
+                // 1. 只有在运行状态下才更新自动旋转角度
+                if (isRunning) {
+                    ring.rotation = (ring.rotation + ring.speed) % 360;
+                }
+                
+                // 始终应用旋转，保证鼠标滚轮手动拨动时也能立即生效
+                ring.groupEl.setAttribute("transform", `rotate(${ring.rotation})`);
+
+                // 2. 计算当前鼠标线与该环的相对交点角度
+                let relativeAngle = (mouseAngle - ring.rotation) % 360;
+                if (relativeAngle < 0) relativeAngle += 360;
+
+                // 3. 寻找命中的扇区并高亮
+                let hitVal = "";
+                ring.arcs.forEach(arcUI => {
+                    if (relativeAngle >= arcUI.data.startAngle && relativeAngle < arcUI.data.endAngle) {
+                        arcUI.textElements.forEach(t => {
+                            // 所有环在被射线扫过时都统一加上金色的高亮样式
+                            t.el.classList.add("highlight-text");
+                            t.el.classList.remove("highlight-text-white");
+                            t.el.style.filter = "none"; // 让 css class 接管 filter
+                        });
+                        hitVal = arcUI.data.text;
+                    } else {
+                        arcUI.textElements.forEach(t => {
+                            t.el.classList.remove("highlight-text");
+                            t.el.classList.remove("highlight-text-white");
+                            // 恢复原有的暗淡滤镜，带上渐变的透明度
+                            const textGlowOpacity = 0.8 - (0.6 * (i / (ringCount - 1)));
+                            t.el.style.filter = `drop-shadow(0 0 4px rgba(255, 255, 255, ${textGlowOpacity}))`; // 恢复白色的发光
+                        });
+                    }
+                });
+
+                valMap[ring.name] = hitVal;
+                
+                // 实时同步下拉框的值
+                if (selects[i].value !== hitVal) {
+                    selects[i].value = hitVal;
+                }
+                
+                copyTextArray.push(hitVal);
+            });
+
+            // 更新复制文本框
+            const currentResultJSON = JSON.stringify(valMap);
+            if (currentResultJSON !== lastResultJSON) {
+                lastResultJSON = currentResultJSON;
+                document.getElementById("copy-textarea").value = copyTextArray.join("，");
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // 复制按钮交互逻辑 (绑定到八字真言上)
+        document.getElementById("quote-container").addEventListener("click", function() {
+            const textArea = document.getElementById("copy-textarea");
+            textArea.select();
+            document.execCommand("copy");
+            
+            // 复制成功的提示动画
+            this.innerHTML = '';
+            const copiedSpan = document.createElement("div");
+            copiedSpan.className = "copied-text";
+            copiedSpan.innerText = "命格已定";
+            this.appendChild(copiedSpan);
+            
+            // 2秒后恢复八字真言 (取消高低错落，全部排直)
+            setTimeout(() => {
+                this.innerHTML = '';
+                const fengHouQuote = document.createElement("div");
+                fengHouQuote.className = "feng-hou-quote";
+                fengHouQuote.id = "feng-hou-quote";
+                fengHouQuote.innerHTML = `
+                    <span>先</span>
+                    <span>天</span>
+                    <span>领</span>
+                    <span>周</span>
+                    <span>天</span>
+                    <span>，</span>
+                    <span>盖</span>
+                    <span>周</span>
+                    <span>天</span>
+                    <span>之</span>
+                    <span>变</span>
+                    <span>，</span>
+                    <span>化</span>
+                    <span>吾</span>
+                    <span>为</span>
+                    <span>王</span>
+                `;
+                this.appendChild(fengHouQuote);
+            }, 2000);
+        });
+
+        // 生成繁星背景
+        function generateStars(count, size) {
+            let shadows = [];
+            for(let i = 0; i < count; i++) {
+                // 生成在左上角原点周围大范围的坐标，覆盖旋转后的所有区域
+                let x = (Math.random() - 0.5) * 6000;
+                let y = (Math.random() - 0.5) * 6000;
+                let alpha = 0.2 + Math.random() * 0.8;
+                shadows.push(`${x}px ${y}px 0 ${size}px rgba(255,255,255,${alpha})`);
+            }
+            return shadows.join(', ');
+        }
+        document.querySelector('.layer-1').style.boxShadow = generateStars(400, 1);
+        document.querySelector('.layer-2').style.boxShadow = generateStars(200, 1.5);
+        document.querySelector('.layer-3').style.boxShadow = generateStars(100, 2);
+
+        // 启动动画
+        animate();
+
+    </script>
+</body>
+</html>
