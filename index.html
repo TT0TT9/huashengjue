@@ -457,7 +457,8 @@
             { name: "情绪", desc: "计算时的实时状态，极端情绪（崩溃/狂喜/醉酒）极易导致数字判断失误。", values: ["疲惫想躺:20", "焦虑内耗:15", "愤怒暴躁:10", "无聊打发:10", "崩溃破防:8", "极度冷静:8", "狂喜极嗨:5", "攀比嫉妒:5", "懊悔自责:5", "迷茫无措:5", "患得患失:5", "醉酒冲动:4"] },
             { name: "突发", desc: "打破平静生活的强外部变量，往往是触发本次紧急计算行为的直接导火索。", values: ["日常平淡:30", "急需用钱:10", "刚被裁员降薪:6", "家人突发疾病:6", "撞车追尾定损:5", "遭遇诈骗维权:5", "手机电器损坏:5", "基金股票暴跌:5", "信用卡快逾期:5", "房东突然赶人:4", "宠物突发恶疾:4", "意外发笔横财:4", "航班延误退改:4", "亲戚突然借钱:4", "忘买礼物补救:3"] },
             { name: "环境", desc: "计算发生时的物理或时间空间，恶劣的环境（堵车/深夜/排队）会增加计算难度。", values: ["普通工作日:25", "发薪还款日前:12", "深夜失眠熬夜:10", "双十一大促前:8", "公司厕所摸鱼:6", "暴雨大雪天气:5", "嘈杂菜场超市:5", "医院走廊排队:5", "堵车的高架桥:5", "高铁飞机途中:5", "银行政务排号:4", "亲戚吵闹聚餐:4", "停电断网状态:2", "刚睡醒迷糊中:2", "烈日暴晒街头:2"] },
-            { name: "动机", desc: "【核心】计算的最底层驱动力：是为了省钱、防骗、做任务，还是规划未来？", values: ["防御止损:30", "进取逐利:30", "任务责任:25", "规划预期:15"] }
+            { name: "动机", desc: "【核心】计算的最底层驱动力：是为了省钱、防骗、做任务，还是规划未来？", values: ["防御止损:30", "进取逐利:30", "任务责任:25", "规划预期:15"] },
+            { name: "语言", desc: "最外层的紫环点，直接决定生成数据中 user 的第一句话是怎么说的。", values: ["直给数据型(无废话):20", "暴躁吐槽型(带情绪):15", "急迫催促型(要快):15", "絮絮叨叨型(拉家常):15", "卑微求助型(谨慎):15", "精明算计型(抠细节):10", "自然唤醒型(带AI昵称):10"] }
         ];
 
         const ringCount = rawRings.length;
@@ -751,10 +752,11 @@
             hoverArea.setAttribute("cy", 0);
             hoverArea.setAttribute("r", r_mid);
             hoverArea.setAttribute("fill", "none");
-            hoverArea.setAttribute("stroke", "transparent");
+            hoverArea.setAttribute("stroke", "rgba(0,0,0,0.01)");
             hoverArea.setAttribute("stroke-width", currentRingWidth); // 使用动态计算的环宽
             // 必须使用 stroke，如果用 all 会导致大圆的透明内部区域遮挡小圆！
             hoverArea.style.pointerEvents = "stroke"; 
+            hoverArea.setAttribute("pointer-events", "stroke");
             hoverArea.style.cursor = "help";
             
             // SVG 内圆环的悬浮提示逻辑
@@ -784,13 +786,12 @@
             const ratio = 0.88;   // 等比衰减系数
             
             let speed = 0;
-            if (i === 18) {
-                // 第 19 环 (索引 18，动机环) 保持原有逻辑不动 (最慢)
+            if (i === ringCount - 1 || i === ringCount - 2) {
+                // 最外两环（动机、风格）保持较慢速度
                 speed = maxSpeed * Math.pow(ratio, i) * direction;
             } else {
-                // 第 1 环到第 18 环 (索引 0 到 17) 速度首尾对调
-                // 也就是原本索引为 i 的环，现在使用索引 (17 - i) 的速度
-                const reversedIndex = 17 - i;
+                // 内侧的环速度首尾对调
+                const reversedIndex = (ringCount - 3) - i;
                 speed = maxSpeed * Math.pow(ratio, reversedIndex) * direction;
             }
 
@@ -809,6 +810,7 @@
         // 射线及交点容器 (跟随鼠标旋转)
         const mouseTrackerGroup = document.createElementNS(svgNS, "g");
         mouseTrackerGroup.setAttribute("transform", `translate(${center}, ${center})`);
+        mouseTrackerGroup.setAttribute("pointer-events", "none"); // 确保射线组不会遮挡下方的鼠标悬停事件
         svg.appendChild(mouseTrackerGroup);
 
         // 射线主线 - 确保是纯金色，粗细与边框差不多，稍微粗一点
@@ -842,6 +844,7 @@
         // 移除最外侧交点区域的径向光晕和核心点，因为用户说“这块给我改回去，还能再丑点吗”，说明他不喜欢最外圈的这些发光效果
         // 回复用户：已经为您恢复了紫色焦点！
         // 最外侧边缘的紫金色渐变弧 (辐射影响左右边框，覆盖约 20 厘米，对应大约 60 度)
+        // 现在的紫环在第20环（语言风格），我们要在射线与最外环交点处画一个紫色的点
         const outerArcPath = document.createElementNS(svgNS, "path");
         const angleSpan = 30; // 总跨度 60 度 (左右各 30 度)，视觉上约 20 厘米
         const startA = -angleSpan * Math.PI / 180;
@@ -865,8 +868,14 @@
         outerArcPath.appendChild(animateArcOpacity);
         mouseTrackerGroup.appendChild(outerArcPath);
 
-        // 完全移除径向光晕 (outerPointBlob)
-        // 完全移除中心白紫色的外发光核心点 (outerPoint)
+        // 重新添加紫色的点在最外圈 (因为用户要求紫色的点一定要在最外圈)
+        const purpleOuterDot = document.createElementNS(svgNS, "circle");
+        purpleOuterDot.setAttribute("cx", outerRadius);
+        purpleOuterDot.setAttribute("cy", 0);
+        purpleOuterDot.setAttribute("r", 6);
+        purpleOuterDot.setAttribute("fill", "#FFFFFF");
+        purpleOuterDot.style.filter = "drop-shadow(0 0 10px #9932CC) drop-shadow(0 0 20px #660099)";
+        mouseTrackerGroup.appendChild(purpleOuterDot);
 
         // 创建一个专门存放“相交光点”的容器 (为了兼容旧代码不报错，如果旧代码还有引用的话)
         const pointsContainer = document.createElementNS(svgNS, "g");
@@ -1027,8 +1036,8 @@
             const itemDiv = document.createElement('div');
             itemDiv.className = 'result-item';
             
-            // 如果是动机环，让它占满两列
-            if (ring.name === "动机") {
+            // 如果是动机环或语言环，让它占满两列
+            if (ring.name === "动机" || ring.name === "语言") {
                 itemDiv.classList.add('full-width');
             }
             
